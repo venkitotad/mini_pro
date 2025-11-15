@@ -16,6 +16,7 @@ router.post("/sync", requireAuth(), async (req, res) => {
     const fullName =
       `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || null;
 
+    // Insert / update USERS table
     const { rows } = await pool.query(
       `
       INSERT INTO users (clerk_user_id, email, role, full_name)
@@ -25,24 +26,45 @@ router.post("/sync", requireAuth(), async (req, res) => {
         email = EXCLUDED.email,
         full_name = EXCLUDED.full_name,
         updated_at = NOW(),
-        role = CASE WHEN users.role IS NULL THEN EXCLUDED.role ELSE users.role END
+        role = CASE 
+                 WHEN users.role IS NULL THEN EXCLUDED.role 
+                 ELSE users.role 
+               END
       RETURNING *;
       `,
       [userId, email, role, fullName]
     );
 
-    console.log(`Synced user: ${email || "no-email"} (${rows[0].role})`);
-    res.json({ user: rows[0] });
+    const appUser = rows[0];
+
+    
+    if (role === "student") {
+      await pool.query(
+        `
+        INSERT INTO students (user_id)
+        VALUES ($1)
+        ON CONFLICT (user_id) DO NOTHING;
+        `,
+        [appUser.id]
+      );
+      console.log(`Student synced: ${email}`);
+    }
+
+    console.log(`Synced user: ${email || "no-email"} (${appUser.role})`);
+    res.json({ user: appUser });
+
   } catch (err) {
     console.error("Error in /sync:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-
 router.get("/me", requireAuth(), async (req, res) => {
   const { userId } = req.auth;
-  const { rows } = await pool.query("SELECT * FROM users WHERE clerk_user_id = $1", [userId]);
+  const { rows } = await pool.query(
+    "SELECT * FROM users WHERE clerk_user_id = $1",
+    [userId]
+  );
   if (!rows.length) return res.status(404).json({ error: "User not found" });
   res.json(rows[0]);
 });

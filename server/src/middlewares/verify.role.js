@@ -7,28 +7,29 @@ import { pool } from "../config/db.js";
  */
 export function requireRole(requiredRole) {
   return [
-    requireAuth(), // Ensures the user is authenticated with Clerk
+    requireAuth(), // Clerk auth validation
     async (req, res, next) => {
       try {
-        const { userId } = req.auth;
+        const { userId: clerkUserId } = req.auth;
 
-        // Fetch user record from your PostgreSQL
+        // Fetch user record
         const { rows } = await pool.query(
-          "SELECT role FROM users WHERE clerk_user_id = $1",
-          [userId]
+          "SELECT id, role FROM users WHERE clerk_user_id = $1",
+          [clerkUserId]
         );
 
         if (rows.length === 0) {
           return res.status(404).json({ error: "User not found in database" });
         }
 
-        const userRole = rows[0].role;
+        const dbUser = rows[0];
 
-        // Attach to request for downstream usage
-        req.userRole = userRole;
+        // Attach user details
+        req.userId = dbUser.id;     
+        req.userRole = dbUser.role;
 
-        // Check if user has the required role
-        if (userRole !== requiredRole) {
+        // Check role
+        if (dbUser.role !== requiredRole) {
           return res.status(403).json({
             error: `Access denied: requires '${requiredRole}' role`,
           });

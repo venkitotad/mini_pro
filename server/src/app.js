@@ -11,6 +11,7 @@ import { clerkMiddleware } from "@clerk/express";
 // import dashboardRouter from "./routes/student.routes.js";
 import studentRouter from "./routes/student.routes.js";
 import staffRouter from "./routes/staff.routes.js";
+import attendanceRouter from "./routes/attendance.routes.js";
 
 dotenv.config();
 const app = express();
@@ -32,6 +33,10 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "geolocation=(self)");
+  next();
+});
 
 
 
@@ -50,6 +55,7 @@ app.get("/health", async (req, res) => {
 app.use("/api/users", userRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/staff", staffRouter);
+app.use("/api/attendance", attendanceRouter);
 
 
 
