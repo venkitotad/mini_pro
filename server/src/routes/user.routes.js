@@ -37,7 +37,7 @@ router.post("/sync", requireAuth(), async (req, res) => {
 
     const appUser = rows[0];
 
-    
+    // Auto-create student row
     if (role === "student") {
       await pool.query(
         `
@@ -50,7 +50,15 @@ router.post("/sync", requireAuth(), async (req, res) => {
       console.log(`Student synced: ${email}`);
     }
 
+    // 🔥 CRITICAL FIX — Store role in Clerk publicMetadata
+    await clerkClient.users.updateUser(userId, {
+      publicMetadata: {
+        role: appUser.role,
+      },
+    });
+
     console.log(`Synced user: ${email || "no-email"} (${appUser.role})`);
+
     res.json({ user: appUser });
 
   } catch (err) {

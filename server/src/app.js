@@ -12,6 +12,7 @@ import { clerkMiddleware } from "@clerk/express";
 import studentRouter from "./routes/student.routes.js";
 import staffRouter from "./routes/staff.routes.js";
 import attendanceRouter from "./routes/attendance.routes.js";
+import { campusCheck } from "./middlewares/campus.check.js";
 
 dotenv.config();
 const app = express();
@@ -22,7 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json());
 
-// ✅ Enable Clerk middleware globally (must come before your routes)
+
 app.use(clerkMiddleware());
 
 // CORS
@@ -32,6 +33,8 @@ app.use(
     credentials: true,
   })
 );
+
+
 
 app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "geolocation=(self)");
@@ -52,6 +55,7 @@ app.get("/health", async (req, res) => {
 });
 
 // Routes
+app.use('api/student',campusCheck);
 app.use("/api/users", userRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/staff", staffRouter);
